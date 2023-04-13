@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Trang web sử dụng camera</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/face-landmarks-detection"></script>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 0;
+        padding: 0;
+      }
+      #container {
+        margin: 0 auto;
+        max-width: 800px;
+        text-align: center;
+      }
+      video {
+        width: 100%;
+        max-width: 800px;
+      }
+      canvas {
+        position: absolute;
+        top: 0;
+        left: 0;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="container">
+      <h1>Trang web sử dụng camera</h1>
+      <video id="video" autoplay></video>
+      <canvas id="overlay"></canvas>
+    </div>
+    <script>
+      const video = document.querySelector("#video");
+      const overlay = document.querySelector("#overlay");
+      const ctx = overlay.getContext("2d");
+
+      let model;
+
+      async function detectFaces() {
+        if (!model) {
+          model = await faceLandmarksDetection.load(
+            faceLandmarksDetection.SupportedPackages.mediapipeFacemesh
+          );
+        }
+
+        const predictions = await model.estimateFaces({
+          input: video
+        });
+
+        ctx.clearRect(0, 0, overlay.width, overlay.height);
+
+        if (predictions.length > 0) {
+          predictions.forEach(prediction => {
+            ctx.beginPath();
+            ctx.lineWidth = "4";
+            ctx.strokeStyle = "blue";
+            ctx.rect(
+              prediction.boundingBox.topLeft[0],
+              prediction.boundingBox.topLeft[1],
+              prediction.boundingBox.bottomRight[0] -
+                prediction.boundingBox.topLeft[0],
+              prediction.boundingBox.bottomRight[1] -
+                prediction.boundingBox.topLeft[1]
+            );
+            ctx.stroke();
+          });
+        }
+
+        requestAnimationFrame(detectFaces);
+      }
+
+      navigator.mediaDevices
+        .getUserMedia({ video: true })
+        .then(stream => {
+          video.srcObject = stream;
+
+          video.addEventListener("loadeddata", () => {
+            overlay.width = video.videoWidth;
+            overlay.height = video.videoHeight;
+
+            detectFaces();
+          });
+        });
+    </script>
+  </body>
+</html>
